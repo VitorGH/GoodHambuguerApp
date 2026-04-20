@@ -1,0 +1,55 @@
+# === C# / .NET / Visual Studio ===
+
+# Diretórios de compilação (Binários e Arquivos Intermediários)
+[Bb]in/
+[Oo]bj/
+
+# Arquivos e diretórios específicos do Visual Studio
+.vs/
+*.user
+*.userprefs
+*.suo
+*.sln.docstates
+
+# Arquivos e diretórios específicos do Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Arquivos específicos do JetBrains Rider
+.idea/
+*.sln.iml
+
+# Ocultar arquivos do Windows e macOS
+.DS_Store
+*.lnk
+
+# Resultados de Testes e Logs
+[Ll]og/
+[Ll]ogs/
+[Tt]est[Rr]esult*/
+*.trx
+
+# Node.js / Frontend (útil caso o seu GoodHamburger.Client use NPM/Node)
+node_modules/
+dist/
+dist-server/
+npm-debug.log
+yarn-error.log
+
+# Arquivos de publicação
+[Pp]ublish/
+
+# Arquivos de banco de dados locais temporários
+*.mdf
+*.ldf
+*.ndf
+*.sqlite
+*.sqlite3
+
+# Arquivos de ambiente (nunca inclua isso no repositório por segurança)
+.env
+.env.local
