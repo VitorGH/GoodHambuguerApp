@@ -1,8 +1,6 @@
 # Contexto do Desafio Técnico - C# Developer (Júnior) - GoodHambuguerAPI
 
 ## Visão Geral
-* **Empresa**: STgenetics.
-* **Vaga**: Desenvolvedor C#.
 * **Cenário**: Desenvolvimento de um sistema de registro de pedidos para a lanchonete "Good Hamburger".
 * **Objetivo principal**: Construir uma aplicação que demonstre boas práticas de organização de código, modelagem do problema e decisões técnicas.
 

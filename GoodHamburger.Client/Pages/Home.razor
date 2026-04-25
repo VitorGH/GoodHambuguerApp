@@ -1,7 +1,322 @@
-﻿@page "/"
+@page "/"
+@inject MenuService MenuService
+@inject OrderService OrderService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Novo Pedido - Good Hamburger</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1 class="mb-4">🍔 Novo Pedido</h1>
 
-Welcome to your new app.
+@* === ALERT DE ERRO === *@
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>⚠️ Erro:</strong> @errorMessage
+        <button type="button" class="btn-close" @onclick="DismissError"></button>
+    </div>
+}
+
+@* === ALERT DE SUCESSO === *@
+@if (lastOrder is not null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <h5 class="alert-heading">✅ Pedido realizado com sucesso!</h5>
+        <hr />
+        <div class="row">
+            <div class="col-md-4">
+                <strong>Subtotal:</strong> R$ @lastOrder.Subtotal.ToString("F2")
+            </div>
+            <div class="col-md-4">
+                <strong>Desconto (@lastOrder.DiscountPercentage%): </strong>
+                <span class="text-danger">- R$ @lastOrder.DiscountAmount.ToString("F2")</span>
+            </div>
+            <div class="col-md-4">
+                <strong>Total Final:</strong>
+                <span class="fs-5 fw-bold text-success">R$ @lastOrder.Total.ToString("F2")</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" @onclick="DismissSuccess"></button>
+    </div>
+}
+
+@if (loading)
+{
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        @* === COLUNA ESQUERDA: CARDÁPIO === *@
+        <div class="col-lg-7 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">📋 Cardápio</h5>
+                </div>
+                <div class="card-body">
+                    @* --- Sanduíches --- *@
+                    <h6 class="text-uppercase text-muted fw-bold mb-3">🥪 Sanduíches</h6>
+                    <div class="row g-2 mb-4">
+                        @foreach (var item in sandwiches)
+                        {
+                            var isSelected = selectedItems.Contains(item.Id);
+                            var isDisabled = !isSelected && HasSandwich;
+                            <div class="col-md-4">
+                                <div class="card h-100 @(isSelected ? "border-success bg-success-subtle" : "")">
+                                    <div class="card-body text-center p-3">
+                                        <h6 class="card-title mb-1">@item.Name</h6>
+                                        <p class="card-text text-muted mb-2">R$ @item.Price.ToString("F2")</p>
+                                        @if (isSelected)
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm w-100"
+                                                    @onclick="() => RemoveItem(item.Id)">
+                                                ✕ Remover
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-success btn-sm w-100"
+                                                    disabled="@isDisabled"
+                                                    @onclick="() => AddItem(item.Id)">
+                                                + Adicionar
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* --- Acompanhamentos --- *@
+                    <h6 class="text-uppercase text-muted fw-bold mb-3">🍟 Acompanhamentos</h6>
+                    <div class="row g-2 mb-4">
+                        @foreach (var item in sides)
+                        {
+                            var isSelected = selectedItems.Contains(item.Id);
+                            var isDisabled = !isSelected && HasSide;
+                            <div class="col-md-6">
+                                <div class="card h-100 @(isSelected ? "border-success bg-success-subtle" : "")">
+                                    <div class="card-body text-center p-3">
+                                        <h6 class="card-title mb-1">@item.Name</h6>
+                                        <p class="card-text text-muted mb-2">R$ @item.Price.ToString("F2")</p>
+                                        @if (isSelected)
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm w-100"
+                                                    @onclick="() => RemoveItem(item.Id)">
+                                                ✕ Remover
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-success btn-sm w-100"
+                                                    disabled="@isDisabled"
+                                                    @onclick="() => AddItem(item.Id)">
+                                                + Adicionar
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* --- Bebidas --- *@
+                    <h6 class="text-uppercase text-muted fw-bold mb-3">🥤 Bebidas</h6>
+                    <div class="row g-2">
+                        @foreach (var item in drinks)
+                        {
+                            var isSelected = selectedItems.Contains(item.Id);
+                            var isDisabled = !isSelected && HasDrink;
+                            <div class="col-md-6">
+                                <div class="card h-100 @(isSelected ? "border-success bg-success-subtle" : "")">
+                                    <div class="card-body text-center p-3">
+                                        <h6 class="card-title mb-1">@item.Name</h6>
+                                        <p class="card-text text-muted mb-2">R$ @item.Price.ToString("F2")</p>
+                                        @if (isSelected)
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm w-100"
+                                                    @onclick="() => RemoveItem(item.Id)">
+                                                ✕ Remover
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-success btn-sm w-100"
+                                                    disabled="@isDisabled"
+                                                    @onclick="() => AddItem(item.Id)">
+                                                + Adicionar
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* === COLUNA DIREITA: CARRINHO / RESUMO === *@
+        <div class="col-lg-5 mb-4">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">🛒 Seu Pedido</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedItems.Count == 0)
+                    {
+                        <p class="text-muted text-center py-4">
+                            <em>Nenhum item selecionado. Escolha itens do cardápio ao lado.</em>
+                        </p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush mb-3">
+                            @foreach (var itemId in selectedItems)
+                            {
+                                var item = menuItems.First(m => m.Id == itemId);
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>@item.Name</span>
+                                    <div>
+                                        <span class="badge bg-secondary me-2">R$ @item.Price.ToString("F2")</span>
+                                        <button class="btn btn-outline-danger btn-sm"
+                                                @onclick="() => RemoveItem(itemId)">✕</button>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+
+                        @* --- Prévia do desconto --- *@
+                        <div class="border-top pt-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Subtotal:</span>
+                                <span>R$ @PreviewSubtotal.ToString("F2")</span>
+                            </div>
+                            @if (PreviewDiscount > 0)
+                            {
+                                <div class="d-flex justify-content-between mb-1 text-success">
+                                    <span>Desconto (@PreviewDiscount%):</span>
+                                    <span>- R$ @PreviewDiscountAmount.ToString("F2")</span>
+                                </div>
+                            }
+                            <div class="d-flex justify-content-between fw-bold fs-5 mt-2">
+                                <span>Total Estimado:</span>
+                                <span class="text-primary">R$ @PreviewTotal.ToString("F2")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary w-100 btn-lg"
+                            disabled="@(selectedItems.Count == 0 || submitting)"
+                            @onclick="SubmitOrder">
+                        @if (submitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Enviando...</span>
+                        }
+                        else
+                        {
+                            <span>✓ Finalizar Pedido</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MenuItemResponse> menuItems = new();
+    private List<MenuItemResponse> sandwiches = new();
+    private List<MenuItemResponse> sides = new();
+    private List<MenuItemResponse> drinks = new();
+
+    private List<int> selectedItems = new();
+    private bool loading = true;
+    private bool submitting = false;
+    private string? errorMessage;
+    private OrderResponse? lastOrder;
+
+    // Verificações de limite por tipo
+    private bool HasSandwich => selectedItems.Any(id => sandwiches.Any(s => s.Id == id));
+    private bool HasSide => selectedItems.Any(id => sides.Any(s => s.Id == id));
+    private bool HasDrink => selectedItems.Any(id => drinks.Any(d => d.Id == id));
+
+    // Prévia dos cálculos no frontend
+    private decimal PreviewSubtotal => selectedItems.Sum(id => menuItems.First(m => m.Id == id).Price);
+
+    private decimal PreviewDiscount
+    {
+        get
+        {
+            if (HasSandwich && HasSide && HasDrink) return 20m;
+            if (HasSandwich && HasDrink) return 15m;
+            if (HasSandwich && HasSide) return 10m;
+            return 0m;
+        }
+    }
+
+    private decimal PreviewDiscountAmount => PreviewSubtotal * (PreviewDiscount / 100m);
+    private decimal PreviewTotal => PreviewSubtotal - PreviewDiscountAmount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            menuItems = await MenuService.GetAllAsync();
+            sandwiches = menuItems.Where(m => m.Type == "Sandwich").ToList();
+            sides = menuItems.Where(m => m.Type == "Side").ToList();
+            drinks = menuItems.Where(m => m.Type == "Drink").ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Não foi possível carregar o cardápio. Verifique se a API está rodando. ({ex.Message})";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void AddItem(int menuItemId)
+    {
+        if (!selectedItems.Contains(menuItemId))
+        {
+            selectedItems.Add(menuItemId);
+            DismissError();
+        }
+    }
+
+    private void RemoveItem(int menuItemId)
+    {
+        selectedItems.Remove(menuItemId);
+    }
+
+    private async Task SubmitOrder()
+    {
+        submitting = true;
+        errorMessage = null;
+        lastOrder = null;
+
+        var request = new CreateOrderRequest { MenuItemIds = selectedItems };
+        var result = await OrderService.CreateAsync(request);
+
+        if (result.Success)
+        {
+            lastOrder = result.Data;
+            selectedItems.Clear();
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+
+        submitting = false;
+    }
+
+    private void DismissError() => errorMessage = null;
+    private void DismissSuccess() => lastOrder = null;
+}

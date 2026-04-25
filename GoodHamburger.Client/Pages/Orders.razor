@@ -1,0 +1,268 @@
+@page "/orders"
+@inject OrderService OrderService
+
+<PageTitle>Histórico de Pedidos - Good Hamburger</PageTitle>
+
+<h1 class="mb-4">📋 Histórico de Pedidos</h1>
+
+@* === ALERT DE ERRO === *@
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>⚠️ Erro:</strong> @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+@* === ALERT DE SUCESSO === *@
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
+@if (loading)
+{
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+}
+else if (orders.Count == 0)
+{
+    <div class="text-center text-muted py-5">
+        <h4>Nenhum pedido encontrado</h4>
+        <p>Faça seu primeiro pedido na página <a href="/">Novo Pedido</a>.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Pedido</th>
+                    <th>Itens</th>
+                    <th class="text-end">Subtotal</th>
+                    <th class="text-end">Desconto</th>
+                    <th class="text-end">Total</th>
+                    <th>Data</th>
+                    <th class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td>
+                            <code class="text-muted">@order.Id.ToString()[..8]...</code>
+                        </td>
+                        <td>
+                            @foreach (var item in order.Items)
+                            {
+                                <span class="badge bg-secondary me-1">@item.Name</span>
+                            }
+                        </td>
+                        <td class="text-end">R$ @order.Subtotal.ToString("F2")</td>
+                        <td class="text-end">
+                            @if (order.DiscountPercentage > 0)
+                            {
+                                <span class="text-success">
+                                    @order.DiscountPercentage% (-R$ @order.DiscountAmount.ToString("F2"))
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="text-end fw-bold">R$ @order.Total.ToString("F2")</td>
+                        <td>@order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-center">
+                            <button class="btn btn-outline-primary btn-sm me-1"
+                                    @onclick="() => ToggleDetails(order.Id)">
+                                @(expandedOrderId == order.Id ? "Fechar" : "Detalhes")
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm"
+                                    disabled="@(deletingOrderId == order.Id)"
+                                    @onclick="() => DeleteOrder(order.Id)">
+                                @if (deletingOrderId == order.Id)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                }
+                                else
+                                {
+                                    <span>Cancelar</span>
+                                }
+                            </button>
+                        </td>
+                    </tr>
+                    @* --- Linha de detalhes expandida --- *@
+                    @if (expandedOrderId == order.Id)
+                    {
+                        <tr class="table-light">
+                            <td colspan="7">
+                                <div class="p-3">
+                                    <h6 class="fw-bold mb-3">Detalhes do Pedido</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="table-secondary">
+                                                    <tr>
+                                                        <th>Item</th>
+                                                        <th>Tipo</th>
+                                                        <th class="text-end">Preço</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var item in order.Items)
+                                                    {
+                                                        <tr>
+                                                            <td>@item.Name</td>
+                                                            <td>
+                                                                @(item.Type switch
+                                                                {
+                                                                    "Sandwich" => "🥪 Sanduíche",
+                                                                    "Side" => "🍟 Acompanhamento",
+                                                                    "Drink" => "🥤 Bebida",
+                                                                    _ => item.Type
+                                                                })
+                                                            </td>
+                                                            <td class="text-end">R$ @item.Price.ToString("F2")</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body">
+                                                    <p class="mb-1"><strong>ID:</strong> <code>@order.Id</code></p>
+                                                    <p class="mb-1"><strong>Criado em:</strong> @order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                                    @if (order.UpdatedAt.HasValue)
+                                                    {
+                                                        <p class="mb-1"><strong>Atualizado em:</strong> @order.UpdatedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                                    }
+                                                    <hr />
+                                                    <p class="mb-1">Subtotal: <strong>R$ @order.Subtotal.ToString("F2")</strong></p>
+                                                    <p class="mb-1">Desconto: <strong class="text-success">@order.DiscountPercentage% (-R$ @order.DiscountAmount.ToString("F2"))</strong></p>
+                                                    <p class="mb-0 fs-5">Total: <strong class="text-primary">R$ @order.Total.ToString("F2")</strong></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@* === MODAL DE CONFIRMAÇÃO DE EXCLUSÃO === *@
+@if (showDeleteConfirm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Cancelar Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja cancelar este pedido?</p>
+                    <p class="text-muted small">Esta ação não pode ser desfeita.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Não, manter</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Sim, cancelar pedido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<OrderResponse> orders = new();
+    private bool loading = true;
+    private string? errorMessage;
+    private string? successMessage;
+    private Guid? expandedOrderId;
+    private Guid? deletingOrderId;
+    private Guid? pendingDeleteId;
+    private bool showDeleteConfirm = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        loading = true;
+        try
+        {
+            orders = await OrderService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Não foi possível carregar os pedidos. Verifique se a API está rodando. ({ex.Message})";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ToggleDetails(Guid orderId)
+    {
+        expandedOrderId = expandedOrderId == orderId ? null : orderId;
+    }
+
+    private void DeleteOrder(Guid orderId)
+    {
+        pendingDeleteId = orderId;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        pendingDeleteId = null;
+        showDeleteConfirm = false;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        showDeleteConfirm = false;
+
+        if (pendingDeleteId is null) return;
+
+        var id = pendingDeleteId.Value;
+        deletingOrderId = id;
+        errorMessage = null;
+        successMessage = null;
+
+        var result = await OrderService.DeleteAsync(id);
+
+        if (result.Success)
+        {
+            orders.RemoveAll(o => o.Id == id);
+            successMessage = "Pedido cancelado com sucesso.";
+
+            if (expandedOrderId == id)
+                expandedOrderId = null;
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+
+        deletingOrderId = null;
+        pendingDeleteId = null;
+    }
+}
